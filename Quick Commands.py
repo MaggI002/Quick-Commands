@@ -1,304 +1,261 @@
+import math
 from blessed import Terminal
 import os
-import time
-#from rich import print
-
-APP_NAME = "Quick Commands"
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 term = Terminal()
-CMD_FILE = CURRENT_DIR + "/commands.conf"
-EDITOR_FILE = CURRENT_DIR + "/editors.conf"
+
+MAIN_MENU_FILE = CURRENT_DIR + "/m-menu.txt"
+COMMANDS_FILE = CURRENT_DIR + "/commands.conf"
+EDITORS_FILE = CURRENT_DIR + "/editors.conf"
+EDIT_INFO_FILE = CURRENT_DIR + "/edit-info.txt"
 OPTIONS_FILE = CURRENT_DIR + "/options.conf"
-
-# Menu entrys
-MAIN_MENU = ["Run a command", "Edit commands", "Options", "Help", "Exit"]
-cmdMenu = []
-commands = []
-EDIT_CMD_MENU = ["Commands are located in the same directory as this file, {}\nThe config file has one line as a description of the command and the line right after it as the command. It skips comments.\nTo add a comment, put a hash symbol at the begining of the line. Must be before a description or after a command.\nTo add a space to fill in into the command (for example for an URL), add a description into the command of what to enter surrounded with backticks like this: `This is a description of what to enter`\nWhen using a terminal application supporting hyperlinks, dollar signs can be used to add them to a description or a comment with the folowing syntax: [dollar sign]text,URL[dollar sign]\nIf your terminal application does not support them, you can disable hyperlinks in the settings, which will also p URL\n$Click me!,https://bit.ly/3uTw3UC$\nYou might not have some of the editors listed here, please pick one that you have and want to use. If you do not have any of these editors, you can edit editor list found in the same directory, same syntax applies.\nPress ENTER to select an editor\nPress ESC to cancel".format(CMD_FILE)]
-editorsMenu = []
-editCommands = []
-options = []
-optionsValues = []
-HELP = ["Use UP and DOWN to change your selection, ENTER to confirm and ESC to return or exit."]
-
-MENU_LIST = {0:cmdMenu, 1:EDIT_CMD_MENU, 2:options, 3:HELP, 4:"Exit"}
+HELP_MENU_FILE = CURRENT_DIR + "/help.txt"
 
 
-# Defining global variables
-lastMenu = MAIN_MENU
-
-term.fullscreen()
-
-def fold_text(selectedMenu):
-    maxWidth = round((term.width/4)*3+2)
-    if term.width < 37:
-        print("Your console window is not wide enough. This application might have some problems running.")
-        exit()
-    for i, s in enumerate(selectedMenu):
-        if len(s) * 2 > maxWidth and s.find("\n") != -1:
-            s = s.split("\n")
-            s = fold_text(s)
-            st2 = ""
-            for st in s:
-                st += "\n"
-                st2 += st
-            s = st2
-        elif len(s) > maxWidth:
-            i2 = 0
-            while s[maxWidth - i2] != " ":
-                i2 += 1
-            s = s[0:(maxWidth - i2)] + "\n" + s[(maxWidth - i2 + 1):len(s)]
-            if len(s) > maxWidth:
-                s = s.split("\n")
-                s = fold_text(s)
-                st2 = ""
-                for st in s:
-                    st2 += st
-            s = st2
-        else:
-            s += "\n"
-        selectedMenu[i] = s
-        s = ""
-    return selectedMenu
-
-# Import from config files
-def import_conf():
-    # Import cmdMenu and commands
-    commentsAbove = 0
-    with open(CMD_FILE) as f:
-        for i, line in enumerate(f.readlines()):
-            if line.find("#") != -1:
-                cmdMenu.append(line.strip())
-                commentsAbove += 1
-            elif (i - commentsAbove) % 2 == 1:
-                commands.append(line.strip())
-            else:
-                cmdMenu.append(line.strip())
-    # Import editCommands and editorsMenu
-    commentsAbove = 0
-    with open(EDITOR_FILE) as f:
-        for i, line in enumerate(f.readlines()):
-            if line.find("#") != -1:
-                editorsMenu.append(line.strip())
-                commentsAbove += 1
-            elif (i - commentsAbove) % 2 == 1:
-                editCommands.append(line.strip())
-            else:
-                editorsMenu.append(line.strip())
-    # Import options and optionsValues
-    with open(OPTIONS_FILE) as f:
-        for i, line in enumerate(f.readlines()):
-            if line.find("#") != -1:
-                options.append(line.strip())
-                commentsAbove += 1
-            elif (i - commentsAbove) % 2 == 1:
-                optionsValues.append(line.strip())
-            else:
-                options.append(line.strip())
-    return commands, cmdMenu, editCommands, editorsMenu
-
-commands, cmdMenu, editCommands, editorsMenu = import_conf()
+last_file = []
+name_to_file = {"main_menu":MAIN_MENU_FILE, "commands":COMMANDS_FILE, "edit_info":EDIT_INFO_FILE, "editors":EDITORS_FILE, "options":OPTIONS_FILE, "help_menu":HELP_MENU_FILE}
 
 
-# Function for displaying a menu
-def display_menu(selection, selectedMenu):
-    maxWidth = round((term.width/4)*3+2)
-    selectNotFound = True
-    commentsAbove = 0
-    commentsTotal = 0
-    for s in selectedMenu:
-        if len(s) > maxWidth and s.find("\n") != -1:
-            selectedMenu = fold_text(selectedMenu)
-    print(term.clear())
-    for (i, name) in enumerate(selectedMenu):
-        if name.find("#") != -1:
-            name = name.replace("#", "    ")
-            if name.find("$") != -1:
-                name = name.split("$")
-                for i, part in enumerate(name):
-                    if i % 2 == 1:
-                        part = part.split(",")
-                        print(f'{term.underline_on_teal}{term.link(part[1],part[0])}{term.normal}', end ="")
-                    else:
-                        print('{t.bold_teal}{title}{t.normal}'.format(t=term, title=part), end ="")
-                print()
-            else:
-                print('{t.bold_teal}{title}{t.normal}'.format(t=term, title=name))
-                commentsTotal += 1
-            if selectNotFound:
-                commentsAbove += 1
-        elif i - commentsAbove == selection:
-            if name.find("$") != -1:
-                name = name.split("$")
-                for i, part in enumerate(name):
-                    if i % 2 == 1:
-                        part = part.split(",")
-                        print(f'{term.underline_teal_on_white}{term.link(part[1],part[0])}{term.normal}', end ="")
-                    else:
-                        print('{t.bold_on_teal}{title}{t.normal}'.format(t=term, title=part), end ="")
-                print()
-            else:
-                print('{t.bold_on_teal}{title}{t.normal}'.format(t=term, title=name))
-                selectNotFound = False
-        else:
-            if name.find("$") != -1:
-                name = name.split("$")
-                for i, part in enumerate(name):
-                    if i % 2 == 1:
-                        part = part.split(",")
-                        print(f'{term.underline}{term.link(part[1], part[0])}{term.normal}', end ="")
-                    else:
-                        print('{t.normal}{title}{t.normal}'.format(t=term, title=part), end ="")
-                print()
-            else:
-                print('{t.normal}{title}'.format(t=term, title=name))
-    return commentsAbove, commentsTotal
+# I do not think there is currently a way to write to options, check this whole section before making anything tho
+
+# run_command does not work, make cmd_return_func. If under class, edit somewhere around line 122 (add class_name.)
 
 
-# Run selection 
-def run_selection(selection, commentsAbove, selectedMenu):
-    if selectedMenu == cmdMenu or selectedMenu == editorsMenu:
-        print(term.turquoise_reverse('Running {}'.format(selectedMenu[selection + commentsAbove])))
-        if selectedMenu == cmdMenu:
-            st = commands[selection]
-            if "`" in st:
-                while "`" in st:
-                    st = enter(st)
-                os.system(st)
-            else:
-                os.system(commands[selection])
-        else:
-            os.system(editCommands[selection])
-            print(term.turquoise("\nPress ENTER to go back to {}\n".format(APP_NAME), "Press an arrow key or TAB to exit {}".format(APP_NAME)))
-            time.sleep(0.5)
-            selection_inprogress = True
+class Settings:
+    def __init__(self):
+        self.first_run = False
+        self.cmd_return = False
+        self.text_color = ""
+        self.accent_color = ""
+        self.max_width_formula = 0
+        # Remember to change settings_to_add a few lines down
+        
+        self.load_settings()
+    
+    def load_settings(self):
+        settings_to_add = [self.first_run, self.cmd_return, self.text_color, self.accent_color, self.max_width_formula]
+        file = load_file(OPTIONS_FILE)
+        for i, val in enumerate(settings_to_add):
+            # The next variable is the option in the file without the backticks
+            o = file[i][1].strip("`")
+            settings_to_add[i] = parse_string(o)
+        self.first_run, self.cmd_return, self.text_color, self.accent_color, self.max_width_formula = settings_to_add
+
+class Menu:
+    def __init__(self, file):
+        # self.file might be useful for debug, 
+        # can add an option to show this at the bottom of the screen for better nav
+        self.file = file
+        self.list = load_file(self.file)
+        self.select()
+
+    def select(self):
+        selection = 0
+        selection_inprogress = True
+        with term.fullscreen():
             with term.cbreak():
                 while selection_inprogress:
+                    print(term.clear())
+                    self.display_menu(selection)
                     key = term.inkey()
                     if key.is_sequence:
-                        if key.name == "KEY_ENTER":
+                        if key.name == 'KEY_TAB':
+                            selection += 1
+                        if key.name == 'KEY_DOWN':
+                            selection += 1
+                        if key.name == 'KEY_UP':
+                            selection -= 1
+                        if key.name == 'KEY_ENTER':
                             selection_inprogress = False
-                            menu(MAIN_MENU)
-                        else:
-                            print(term.clear())
-                            exit()
-    elif selectedMenu == HELP:
-        menu(MAIN_MENU)
-    elif selectedMenu == EDIT_CMD_MENU:
-        menu(editorsMenu)
-    elif selectedMenu == options:
-        s1 = ""
-        s2 = ""
-        s3 = ""
-        with open(OPTIONS_FILE, "r") as f:
-            for i, line in enumerate(f.readlines()):
-                if i < selection * 2 + 1:
-                    s1 += line
-                elif i > selection * 2 + 1:
-                    s3 += line
-                else:
-                    s2 = line.strip("\n")
-        s2 = ("`" + enter(s2) + "`") + "\n"
-        with open(OPTIONS_FILE, "w") as f:
-            f.write(s1 + s2 + s3)
-        menu(options)
-
-
-# Function for entering stuff
-def enter(enteredStr):
-    st = ""
-    enteredStr = enteredStr.split("`", 2)
-    exitStr = enteredStr[1]
-    cursor = len(enteredStr[1])
-    selection_inprogress = True
-    display_text(enteredStr, cursor)
-    with term.cbreak():
-        while selection_inprogress:
-            key = term.inkey()
-            if key.is_sequence:
-                if key.name == "KEY_BACKSPACE":
-                    if len(enteredStr[1]) > 0:
-                        enteredStr[1] = enteredStr[1][0:cursor - 1] + enteredStr[1][cursor:len(enteredStr)]
-                        cursor -= 1
-                if key.name == "KEY_ENTER":
-                    selection_inprogress = False
-                if key.name == "KEY_ESCAPE":
-                    return(exitStr)
-                    exit()
-                if key.name == "KEY_LEFT":
-                    cursor -= 1
-                if key.name == "KEY_RIGHT":
-                    cursor += 1
-            elif key:
-                if cursor == len(enteredStr[1]):
-                    enteredStr[1] = enteredStr[1] + key
-                else:
-                    enteredStr[1] = enteredStr[1][0:cursor] + key + enteredStr[1][-(len(enteredStr[1]) - cursor):]
-                cursor += 1
-            cursor = cursor % (len(enteredStr[1])+1)
-            display_text(enteredStr, cursor)
-    for value in enteredStr:
-        st += value
-    enteredStr = st
-    print(term.clear())
-    return enteredStr
-    
-def display_text(enteredStr, cursor):
-    print(term.clear())
-    if cursor == len(enteredStr[1]):
-        print(term.teal(enteredStr[1]) + "_")
-    else:
-        for i, char in enumerate(enteredStr[1]):
-            if i == cursor:
-                print(term.teal_reverse(enteredStr[1][i]), end="")            
-            else:    
-                print(term.teal(enteredStr[1][i]), end="")
-
-# Menu function
-def menu(selectedMenu):
-    global lastMenu
-    commentsTotal = 0
-    commentsAbove = 0
-    selection = 0
-    selection_inprogress = True
-    with term.cbreak():
-        while selection_inprogress:
-            commentsAbove, commentsTotal = display_menu(selection, selectedMenu)
-            key = term.inkey()
-            if key.is_sequence:
-                if key.name == 'KEY_TAB':
-                    selection += 1
-                if key.name == 'KEY_DOWN':
-                    selection += 1
-                if key.name == 'KEY_UP':
-                    selection -= 1
-                if key.name == 'KEY_ENTER':
-                    selection_inprogress = False
-                    if selectedMenu == MAIN_MENU:
-                        if MENU_LIST[selection] == "Exit":
-                            print(term.clear())
-                            print(term.turquoise("Exiting"))
-                            exit()
-                        else:
-                            lastMenu = selectedMenu
-                            menu(MENU_LIST[selection])
-                    else:
-                        print(term.clear())
-                        if selectedMenu != options:
-                            lastMenu = selectedMenu
-                        run_selection(selection, commentsAbove, selectedMenu)
-                        exit()
-                if key.name == "KEY_ESCAPE":
-                    if selectedMenu == MAIN_MENU:
-                        print(term.clear())
-                        exit()
-                    else:
-                        menu(lastMenu)
-            elif key:
-                print("got {0}.".format(key))
-            if selection == -1:
-                selection = selection % (len(selectedMenu) - commentsTotal)
+                            self.run_action(selection)
+                        if key.name == "KEY_ESCAPE":
+                            selection_inprogress = False
+                            if self.file == MAIN_MENU_FILE:
+                                print(term.clear())
+                                exit()
+                            else:
+                                global last_file
+                                self.switch(0, last_file.pop(-1))
+                        selection = selection % (len(self.list) - 1)
+                
+    def display_menu(self, selection):
+        comments_above = self.get_comments_above(selection)
+        for i, line in enumerate(self.list):
+            if i == selection + comments_above:
+                display.print_line(line[0], True)
             else:
-                selection = selection % (len(selectedMenu) - commentsAbove)
-menu(MAIN_MENU)
+                display.print_line(line[0], False)
+    
+    def get_comments_above(self, selection):
+        comments_above = 0
+        for i, line in enumerate(self.list):
+            if line[0][0] == "#":
+                comments_above += 1
+            if i == selection + comments_above:
+                break
+        return comments_above
+
+    def run_action(self, selection):
+        comments_above = self.get_comments_above(selection)
+        selection += comments_above
+        # First letter of the second item in the selected tuple
+        if self.list[selection][1][0] == ":":
+            self.switch(selection)
+        else:
+            self.run_command(selection)
+
+    def switch(self, selection, file=None):
+        global last_file
+        if file:
+            self = Menu(file) 
+        else:
+                last_file.append(self.file)
+                # Get from list -> tuple (selection) -> action (second item) -> everything but the first character
+                menu_name = self.list[selection][1][1:]
+                self = Menu(name_to_file[menu_name])
+         
+    def run_command(self, selection):
+        os.system(self.list[selection][1])
+        if settings.cmd_return == True:
+            # cmd_return_func is WIP, does not work
+            cmd_return_func(self.list[selection][1])
+
+# A Display object is never created, for now refering to "display" (chceck in Menu -> display_menu())
+# Make an enter_or_something() function for displaying the stuff to fill in when running a command or editing options, consider addind this to menu, not sure
+class Display:
+    def __init__(self):
+        self.part_buffer = []
+
+    def print_line(self, line, is_selected):
+        line = fold_line(line)
+        if line[0] == "#":
+            line = "    " + line[1:]
+            self.append_with_format(line, "comment")
+        elif is_selected:
+            self.append_with_format(line, "highlited")
+        else:
+            self.append_with_format(line, "normal")
+        self.print_part_buffer()
+
+    def append_with_format(self, line, format_of_str):
+        if self.check_for_link(line):
+            line = self.check_for_link(line)
+            for i, part in enumerate(line):
+                if i % 2 == 1:
+                    self.append_link(part)
+                else:
+                    getattr(self, f'append_{format_of_str}')(line)
+        else:
+            getattr(self, f'append_{format_of_str}')(line)
+
+    def check_for_link(self, line):
+        out = []
+        if line.find("$") != -1:
+            list_from_line = line.split("$")
+            for i, part in enumerate(list_from_line):
+                if i % 2 == 1:
+                    part = part.split(",")
+                    tuple_of_link = (part[0], part[1])
+                    out.append(tuple_of_link)
+                else:
+                    out.append(part)
+            return out
+        else:
+            return False
+            
+    # when working check if you need two or one bracket after *.append
+    def append_normal(self, line):
+        self.part_buffer.append((f'{getattr(term, settings.text_color)}{line}{term.normal}'))
+    
+    def append_highlited(self, line):
+        color = f'bold_{settings.text_color}_on_{settings.accent_color}'
+        self.part_buffer.append((f'{getattr(term, color)}{line}{term.normal}'))
+
+    def append_link(self, tuple_of_link):
+        self.part_buffer.append(term.link(tuple_of_link[1], tuple_of_link[0]))
+
+    def append_comment(self, line):
+        self.part_buffer.append((f'{getattr(term, settings.accent_color)}{line}{term.normal}'))
+
+    def print_part_buffer(self):
+        for i in self.part_buffer:
+            print(i, end="")
+        print()
+        self.part_buffer.clear()
+
+def fold_anywhere(line):
+    max_width = term.width
+    for i in range(math.floor((len(line) / max_width))):
+        line = line[:(max_width * (i + 1) + (i * len("\n")))] + "\n" + line[(max_width * (i + 1) + (i * len("\n"))):]
+    return line + "\n"
+
+def fold_at_space(line):
+    max_width = settings.max_width_formula
+    newlines = 0
+    sth = range(0, len(line), math.floor(max_width))
+    for i in range(0, len(line), math.floor(max_width)):
+        if i == 0:
+            continue
+        pointer = i + newlines * 2
+        sth = line[pointer]
+        while line[pointer] != " ":
+            pointer -= 1
+        line = line[:pointer] + "\n" + line[pointer + 1:]
+        newlines += 1
+    return line
+
+def fold_line(line):
+    max_width = settings.max_width_formula
+
+    # Get length of longest word
+    longest_word_len = line.split()
+    longest_word_len = sorted(longest_word_len, key=len)
+    longest_word_len = len(longest_word_len[-1])
+
+    if max_width < longest_word_len:
+        line = fold_anywhere(line)
+        return line
+    elif max_width < len(line):
+        line = fold_at_space(line)
+        return line
+    else:
+        return line
+
+def load_file(file):
+    comments_above = 0
+    menu = []
+    actions = []
+    out = []
+    with open(file) as f:
+        for i, line in enumerate(f.readlines()):
+            if line.find("#") != -1:
+                menu.append(line.strip())
+                actions.append("")
+                comments_above += 1
+            elif (i + comments_above) % 2 == 1:
+                actions.append(line.strip())
+            else:
+                menu.append(line.strip())
+    # Menu list first, coresponding actions or values second, put them in a tuple
+    for i in range(len(menu)):
+        t = (menu[i], actions[i])
+        out.append(t)
+    return out
+
+def parse_string(string):
+    if string.isdigit():
+        return int(string)
+    elif string in ("True", "False"):
+        if string == "True":
+            return True
+        return False
+    elif string.find("(") != -1:
+        return eval(string)
+    return string
+
+
+
+settings = Settings()
+display = Display()
+menu = Menu(MAIN_MENU_FILE)

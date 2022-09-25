@@ -1,0 +1,9 @@
+Run a command
+:commands
+Edit commands
+:edit_cmd_menu
+Options
+:options
+Help
+:help_menu
+#Press ESC to exit
