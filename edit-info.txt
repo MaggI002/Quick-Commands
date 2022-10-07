@@ -1,2 +1,17 @@
-All configs are located in the same directory as this python file\nFeel free to edit any files found here that end with .conf, including the editors.conf file.\nThe config files have one line as a menu entry and the line right after it as the command. Commands can not start with a colon (this: : ). \nComments can be added before the menu entry or after the command by putting a hash symbol at the begining of the line.\nTo add a space to fill in into the command (for example for an URL), add a description of what to fill in into the command surrounded by backticks like this: `This is a description of what to enter here`\nTo add a hyperlink to a menu entry, add a description or name of the link comma link surrounded by dollar signs like this: [dollar sign]description or name,link[dollar sign]\nIf your terminal application does not support hyperlinks, you can enable alternative hyperlinks in the settings, which also include the link that you entered. Here is a test hyperlink: $Click me!,https://bit.ly/3uTw3UC$\nPress ENTER to select an editor\nPress ESC to cancel
-editors
+All configs are located in the same directory as this python file
+:editors
+Feel free to edit any files found here that end with .conf, including the editors.conf file.
+:editors
+The config files have one line as a menu entry and the line right after it as the command. Commands can not start with a : (colon).
+:editors
+Comments can be added before the menu entry or after the command by putting a # (hash symbol) at the begining of the line.
+:editors
+To add a space to fill in into the command (for example for an URL), add a description of what to fill in into the command surrounded by backticks like this: `This is a description of what to enter here`
+:editors
+To add a hyperlink to a menu entry, add a description or name of the link comma link surrounded by dollar signs like this: [dollar sign]description or name,link[dollar sign]
+:editors
+If your terminal application does not support hyperlinks, you can enable alternative hyperlinks in the settings, which also include the link that you entered. Here is a test hyperlink: $Click me!,https://bit.ly/3uTw3UC$
+:editors
+Press ENTER to select an editor
+:editors
+#Press ESC to cancel

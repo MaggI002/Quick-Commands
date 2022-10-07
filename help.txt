@@ -1,4 +1,4 @@
 Use UP, DOWN or TAB to change your selection, ENTER to select or confirm and ESC to return or exit (when editing a line, ESC returns the original line and not what you entered).
-main_menu
+:main_menu
 In this menu, selecting any of the options return you back to the main menu.
-main_menu
+:main_menu

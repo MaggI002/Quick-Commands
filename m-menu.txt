@@ -1,7 +1,7 @@
 Run a command
 :commands
 Edit commands
-:edit_cmd_menu
+:edit_info
 Options
 :options
 Help
